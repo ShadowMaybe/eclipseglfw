@@ -1,0 +1,48 @@
+plugins {
+    id 'com.android.library'
+}
+
+android {
+    namespace 'me.shadow.eclipselauncher.glfw'
+    compileSdk 36
+
+    // Pinned so CI, local builds and release builds all compile against the
+    // same compiler, and so this matches eclipseexec and eclipsesdl rather
+    // than leaving three components on three toolchains.
+    ndkVersion '28.2.13676358'
+
+    defaultConfig {
+        minSdk 21
+        consumerProguardFiles 'consumer-rules.pro'
+
+        // Builds libeclipseglfw.so from the CMake project at the repository
+        // root, so the AAR ships the library with the classes and no consumer
+        // has to remember a separate native build step.
+        externalNativeBuild {
+            cmake {
+                abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path file('../CMakeLists.txt')
+            version '3.22.1'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    buildTypes {
+        release {
+            // Renaming GlfwBridge would break the RegisterNatives binding in
+            // JNI_OnLoad, so minification stays off here and the keep rule
+            // ships in consumer-rules.pro for whoever includes this.
+            minifyEnabled false
+        }
+    }
+}

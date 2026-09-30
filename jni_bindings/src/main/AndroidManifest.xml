@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The namespace comes from build.gradle; the manifest exists because the
+  Android Gradle plugin requires one, not because this library declares
+  anything. eclipseglfw asks for no permissions: it borrows a surface the
+  launcher already owns and handles input events the launcher already receives.
+-->
+<manifest />

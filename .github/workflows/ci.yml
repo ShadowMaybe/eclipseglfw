@@ -1,0 +1,79 @@
+name: CI
+
+# Every push builds and tests. Nothing is published here: this workflow only
+# answers whether the tree is healthy. A published binary comes from
+# release.yml, so a red build never puts an artifact anywhere.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Two jobs rather than two steps, for the same reason EclipseLauncher splits
+# its gate from its build: a host test that fails in three seconds and a
+# native build that takes three minutes are different questions, and running
+# the first first would hide the answer to the second until the first is
+# fixed. Both have to pass for the run to be green; neither decides whether
+# the other gets asked.
+jobs:
+  tests:
+    name: Host tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Build and run the unit tests
+        run: sh tests/run_tests.sh
+
+  build:
+    name: Build and lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          # Only the wrapper is trusted; the cache is keyed on our own inputs.
+          validate-wrappers: true
+
+      # Compiles libeclipseglfw.so for every ABI through the NDK, with
+      # -Werror in CMake. A warning in the native half fails this step rather
+      # than waiting to be found on a device.
+      - name: Build the library
+        run: ./gradlew --no-daemon --stacktrace assembleRelease
+
+      - name: Run lint
+        run: ./gradlew --no-daemon --stacktrace lint
+
+      - name: Upload the lint report
+        # Always, not only on failure. Lint prints no counts to the console,
+        # so a report that existed only when the build was red would be the
+        # one case where nobody needs it — a red build already says lint
+        # failed. The number worth checking is the one on a green run: that
+        # it is still zero, and did not quietly become two.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          path: "**/build/reports/lint-results*"
+          if-no-files-found: ignore
+          retention-days: 7
