@@ -69,7 +69,15 @@ static void test_work_is_refused_before_startup(void) {
 }
 
 static void test_startup_is_idempotent(void) {
+    /* Nothing has started the library yet: the test above exists to prove
+     * that, and it would be a contradiction for this one to find it up. */
+    assert(!eg_is_started());
+
+    assert(eg_startup() == EG_OK);
     assert(eg_is_started());
+
+    /* Idempotent means the second and third calls are no-ops that still
+     * report success, not that they reset anything. */
     assert(eg_startup() == EG_OK);
     assert(eg_startup() == EG_OK);
     assert(eg_is_started());
