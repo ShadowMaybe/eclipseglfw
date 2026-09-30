@@ -45,4 +45,15 @@ android {
             minifyEnabled false
         }
     }
+
+    lint {
+        // This check reports that a newer Gradle exists than the one the
+        // wrapper pins. It is an upgrade nag, not a finding about this code,
+        // and answering it here would mean this component compiles against a
+        // different toolchain from eclipseexec and the launcher — which is
+        // exactly the divergence the pin exists to prevent. Versions across
+        // our components move together or not at all, so a patch release is
+        // not something one library should act on by itself.
+        disable 'AndroidGradlePluginVersion'
+    }
 }
